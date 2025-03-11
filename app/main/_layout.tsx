@@ -9,6 +9,7 @@ import { AuthViewModel } from '../../src/viewmodels/AuthViewModel';
 export default function MainLayout() {
   const colorScheme = useColorScheme();
   const [modalVisible, setModalVisible] = useState(false);
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -42,14 +43,18 @@ export default function MainLayout() {
                 iconName = 'bus';
                 break;
               case 'mapView':
-                iconName = 'map-marker';
+                iconName = 'map';
                 break;
               default:
                 iconName = 'question-circle';
                 break;
             }
 
-            return <FontAwesome name={iconName} size={size} color={color} />;
+            return (
+              <View style={route.name === 'mapView' ? styles.mapIconWrapper : null}>
+                <FontAwesome name={iconName} size={size} color={color} />
+              </View>
+            );
           },
           headerTransparent: true,
           headerTitle: () => (
@@ -65,59 +70,40 @@ export default function MainLayout() {
           ),
           headerTitleAlign: 'center',
           headerLeft: () => (
-            <TouchableOpacity style={styles.iconButton}>
+            <TouchableOpacity style={styles.iconButton} onPress={() => setInfoModalVisible(true)}>
               <FontAwesome name="info-circle" size={28} color="white" />
-              <View style={styles.circle}></View>
             </TouchableOpacity>
           ),
           headerRight: () => (
             <TouchableOpacity style={styles.iconButton} onPress={() => setModalVisible(true)}>
               <FontAwesome name="power-off" size={28} color="white" />
-              <View style={styles.circle}></View>
             </TouchableOpacity>
           ),
         })}
       >
         <Tabs.Screen name="dashboard" options={{ title: 'Inicio' }} />
-        <Tabs.Screen name="lineasView" options={{ title: 'Líneas' }} />
         <Tabs.Screen name="mapView" options={{ title: 'Mapa' }} />
+        <Tabs.Screen name="lineasView" options={{ title: 'Líneas' }} />
       </Tabs>
 
+      {/* Modal de Información */}
       <Modal
-        visible={modalVisible}
+        visible={infoModalVisible}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setModalVisible(false)}
+        onRequestClose={() => setInfoModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            {/* Imagen de Cerrar Sesión */}
             <Image
-              source={require('../../assets/images/CerrarSesion.png')}
+              source={require('../../assets/images/cartao.png')}
               style={styles.modalImage}
               resizeMode="contain"
             />
-
-            {/* Pregunta principal */}
-            <Text style={styles.modalText}>¿Seguro que quieres cerrar sesión?</Text>
-
-            {/* Mensaje adicional con párrafo aparte */}
-            <Text style={styles.modalSubText}>¡Te extrañaremos!</Text>
-            <Text style={styles.modalSubText}>
-              Si cierras sesión, perderás tu progreso y tendrás que iniciar sesión nuevamente.
-            </Text>
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.modalButton} onPress={() => setModalVisible(false)}>
-                <Text style={styles.modalButtonText}>Regresar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: '#d6130c' }]}
-                onPress={handleLogout}
-              >
-                <Text style={styles.modalButtonText}>Cerrar sesión</Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.modalText}>Um cartão uma cidade.</Text>
+            <Text style={styles.modalSubText}>Acesso a experiências e serviços do nosso município num cartão único e gratuito.</Text>
+            <Text style={styles.modalSubText}>Esta aplicação não é oficial do Município de Bragança, mas procura ajudar o cidadão.</Text>
+            <TouchableOpacity onPress={() => setInfoModalVisible(false)} style={styles.modalButton}><Text style={styles.modalButtonText}>Fechar</Text></TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -126,6 +112,11 @@ export default function MainLayout() {
 }
 
 const styles = StyleSheet.create({
+  mapIconWrapper: {
+    backgroundColor: '#5cb32b',
+    padding: 5,
+    borderRadius: 20,
+  },
   tabBar: {
     marginLeft: 30,
     marginRight: 30,

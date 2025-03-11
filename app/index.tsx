@@ -1,3 +1,4 @@
+// app/index.tsx
 import React, { useState, useContext, useEffect } from 'react';
 import {
   View,
@@ -27,10 +28,11 @@ export default function App() {
 
   const router = useRouter();
 
+  // Corregimos la ruta para que siempre navegue a '/main/dashboard'
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, user => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        router.push('/dashboard');
+        router.push('/main/dashboard');
       }
     });
     return () => unsubscribe();
@@ -247,7 +249,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   onboardingButton: {
-
     backgroundColor: '#5cb32b',
     width: '90%',
     paddingVertical: 15,

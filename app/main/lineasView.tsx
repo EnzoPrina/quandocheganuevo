@@ -1,198 +1,346 @@
-// LineasView.tsx
-import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, useColorScheme, Modal } from 'react-native';
-import busStops from '../../src/data/busStops.json';
-import { useFavoriteStops } from '../../src/context/FavoriteStopsContext';
+import { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  Modal,
+  Pressable,
+  useColorScheme,
+  Image,
+} from "react-native";
+// @ts-ignore
+import { db } from "../../src/data/firebaseConfig";
+import { collection, onSnapshot } from "firebase/firestore";
+import React from "react";
 
-const LineasView = () => {
-  const { favoritos, addFavorito, removeFavorito } = useFavoriteStops();
-  const [paradas, setParadas] = useState([]);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [lineColor, setLineColor] = useState('');
-  const scheme = useColorScheme();
+export default function BusStopsApp() {
+  const [cities, setCities] = useState([]);
+  const [selectedCity, setSelectedCity] = useState(null);
+  const [selectedLine, setSelectedLine] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [expandedStops, setExpandedStops] = useState({});
+  // Estado para la simulación: índice de la parada en la que se encuentra el autobús
+  const [activeStopIndex, setActiveStopIndex] = useState(-1);
+  const colorScheme = useColorScheme();
+  const backgroundColor = colorScheme === "dark" ? "#202020" : "#f5f5f5";
 
-  const lineas = [
-    { id: 'U1', name: 'U1', color: '#007722' },
-    { id: 'U2', name: 'U2', color: '#e8c100' },
-    { id: 'U3', name: 'U3', color: '#d6130c' },
-    { id: 'R1', name: 'R1', color: '#ed8100' },
-  ];
+  // Obtención de datos desde Firebase (sin cambios)
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "ciudades"), (snapshot) => {
+      const cityMap = {};
+      snapshot.docs.forEach((doc) => {
+        const cityData = doc.data();
+        if (!cityMap[cityData.city]) {
+          cityMap[cityData.city] = {
+            city: cityData.city,
+            lines: [],
+          };
+        }
+        cityMap[cityData.city].lines.push(cityData.line);
+      });
+      const groupedCities = Object.values(cityMap);
+      setCities(groupedCities);
+    });
 
-  const handleLineaClick = (lineId: string, color: string) => {
-    const data = busStops
-      .filter((stop) => stop.line === lineId)
-      .map((stop) => ({
-        ...stop,
-        isFavorite: favoritos.some((fav) => fav.number === stop.number),
-        color,
-      }));
-    setParadas(data);
-    setLineColor(color);
-    setModalVisible(true);
+    return () => unsubscribe();
+  }, []);
+
+  const fetchLines = (city) => {
+    setSelectedCity(city);
   };
 
-  const toggleFavorito = (paradaNumber: number) => {
-    const parada = busStops.find((stop) => stop.number === paradaNumber);
-    if (favoritos.some((fav) => fav.number === paradaNumber)) {
-      removeFavorito(paradaNumber);
-    } else {
-      addFavorito(parada);
+  const openLineDetails = (line) => {
+    setSelectedLine(line);
+    setShowModal(true);
+  };
+
+  const toggleDropdown = (stopIndex) => {
+    setExpandedStops((prev) => ({
+      ...prev,
+      [stopIndex]: !prev[stopIndex],
+    }));
+  };
+
+  // Función auxiliar: convierte "HH:MM" a minutos desde medianoche
+  const parseTime = (timeStr) => {
+    if (!timeStr || typeof timeStr !== "string") {
+      console.warn("parseTime recibió un valor inválido:", timeStr);
+      return 0;
     }
+    const [hours, minutes] = timeStr.split(":").map(Number);
+    return hours * 60 + minutes;
   };
 
-  const styles = getStyles(scheme, lineColor);
+  // Devuelve la hora actual en minutos (incluyendo segundos fraccionales)
+  const getCurrentTimeInMinutes = () => {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+  };
+
+  // Efecto para simular en tiempo real el avance del autobús en la línea seleccionada
+  useEffect(() => {
+    let timer;
+    if (selectedLine && selectedLine.stops && selectedLine.stops.length > 0) {
+      timer = setInterval(() => {
+        const currentTime = getCurrentTimeInMinutes();
+
+        // Utilizamos los horarios de la primera parada para determinar qué salida (viaje) está activa
+        const firstStopSchedules = selectedLine.stops[0].schedules;
+        if (!firstStopSchedules || firstStopSchedules.length === 0) {
+          setActiveStopIndex(-1);
+          return;
+        }
+        let activeDeparture = null;
+        for (let i = 0; i < firstStopSchedules.length; i++) {
+          const t = parseTime(firstStopSchedules[i]);
+          if (
+            currentTime >= t &&
+            (i === firstStopSchedules.length - 1 ||
+              currentTime < parseTime(firstStopSchedules[i + 1]))
+          ) {
+            activeDeparture = i;
+            break;
+          }
+        }
+        if (activeDeparture === null) {
+          setActiveStopIndex(-1);
+        } else {
+          let index = -1;
+          selectedLine.stops.forEach((stop, i) => {
+            const scheduleValue = stop.schedules && stop.schedules[activeDeparture];
+            if (scheduleValue) {
+              const t = parseTime(scheduleValue);
+              if (currentTime >= t) {
+                index = i;
+              }
+            }
+          });
+          setActiveStopIndex(index);
+        }
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [selectedLine]);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Líneas Disponibles</Text>
-      <FlatList
-        data={lineas}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: item.color }]}
-            onPress={() => handleLineaClick(item.id, item.color)}
-          >
-            <Text style={styles.buttonText}>{item.name}</Text>
-          </TouchableOpacity>
-        )}
-      />
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>Paradas</Text>
+    <View style={[styles.container, { backgroundColor }]}>
+      {!selectedCity ? (
+        <FlatList
+          data={cities}
+          keyExtractor={(item) => item.city}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.cityButton}
+              onPress={() => fetchLines(item)}
+            >
+              <Text style={styles.cityText}>{item.city}</Text>
+            </TouchableOpacity>
+          )}
+        />
+      ) : (
+        <FlatList
+          data={selectedCity.lines}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({ item }) => {
+            const lineColor = item.color.startsWith("#")
+              ? item.color
+              : `#${item.color}`;
+            return (
+              <TouchableOpacity
+                style={[styles.lineButton, { backgroundColor: lineColor }]}
+                onPress={() => openLineDetails(item)}
+              >
+                <Text style={styles.lineText}>Línea: {item.number}</Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
+      )}
+
+      {selectedCity && (
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => setSelectedCity(null)}
+        >
+          <Text style={styles.backText}>Volver a ciudades</Text>
+        </TouchableOpacity>
+      )}
+
+      <Modal visible={showModal} animationType="slide">
+        <View style={[styles.modalContainer, { backgroundColor }]}>
+          <Text style={styles.modalTitle}>Línea {selectedLine?.number}</Text>
           <FlatList
-            data={paradas}
-            keyExtractor={(item) => item?.number ? item.number.toString() : Math.random().toString()}
-            renderItem={({ item }) => (
-              <View style={styles.paradaContainer}>
-                <View style={styles.circle}>
-                  <Text style={styles.circleText}>{item.number}</Text>
+            data={selectedLine?.stops || []}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item, index }) => {
+              const isExpanded = expandedStops[index];
+              const lineColor = selectedLine?.color.startsWith("#")
+                ? selectedLine.color
+                : `#${selectedLine.color}`;
+              return (
+                <View key={index}>
+                  <TouchableOpacity
+                    style={[styles.stopContainer, { backgroundColor: lineColor }]}
+                    onPress={() =>
+                      // Solo permitimos expandir horarios en la primera parada
+                      index === 0 && item.schedules.length > 1 && toggleDropdown(index)
+                    }
+                  >
+                    <View style={styles.stopInfo}>
+                      {activeStopIndex === index && (
+                        <Image
+                          source={require("../../assets/images/autobus.png")}
+                          style={styles.busImage}
+                        />
+                      )}
+                      <Text style={styles.stopText}>
+                        {item.stopNumber} {item.stopName}
+                      </Text>
+                    </View>
+                    {/* Solo se muestran los horarios en la primera parada */}
+                    {index === 0 && (
+                      <Text style={styles.scheduleText}>
+                        {item.schedules.length > 1
+                          ? isExpanded
+                            ? "Ver horarios ↑"
+                            : "Horarios ↓"
+                          : item.schedules[0]}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                  {/* Solo se muestran los horarios expandibles en la primera parada */}
+                  {index === 0 &&
+                    isExpanded &&
+                    item.schedules.map((schedule, i) => (
+                      <Text key={i} style={styles.expandedScheduleText}>
+                        {schedule}
+                      </Text>
+                    ))}
                 </View>
-                <Text style={styles.paradaText}>{item.name}</Text>
-                <TouchableOpacity
-                  style={[styles.heartButton, { backgroundColor: favoritos.some(fav => fav.number === item.number) ? '#5cb32b' : '#ccc' }]}
-                  onPress={() => toggleFavorito(item.number)}
-                >
-                  <Text style={styles.heartText}>❤</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+              );
+            }}
           />
-          <TouchableOpacity
+          <Pressable
             style={styles.closeButton}
-            onPress={() => setModalVisible(false)}
+            onPress={() => setShowModal(false)}
           >
-            <Text style={styles.closeButtonText}>Cerrar</Text>
-          </TouchableOpacity>
+            <Text style={styles.closeText}>Cerrar</Text>
+          </Pressable>
         </View>
       </Modal>
     </View>
   );
-};
+}
 
-const getStyles = (scheme: 'light' | 'dark', lineColor: string) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      padding: 16,
-      backgroundColor: scheme === 'dark' ? '#333' : '#f5f5f5',
-      paddingTop: 180,
-    },
-    title: {
-      fontSize: 24,
-      fontWeight: 'bold',
-      marginBottom: 16,
-      color: scheme === 'dark' ? '#fff' : '#000',
-    },
-    button: {
-      padding: 10,
-      borderRadius: 5,
-      marginBottom: 10,
-      alignItems: 'center',
-    },
-    buttonText: {
-      color: 'white',
-      fontWeight: 'bold',
-      fontSize: 16,
-    },
-    modalContainer: {
-      flex: 1,
-      backgroundColor: scheme === 'dark' ? '#333' : '#f5f5f5',
-      marginVertical: 110,
-      marginHorizontal: 30,
-      borderRadius: 10,
-      padding: 16,
-      elevation: 5,
-      shadowColor: '#0a0a0a',
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.7,
-      shadowRadius: 50,
-    },
-    modalTitle: {
-      fontSize: 22,
-      fontWeight: 'bold',
-      marginBottom: 20,
-      textAlign: 'center',
-      color: scheme === 'dark' ? '#fff' : '#000',
-    },
-    paradaContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 10,
-    },
-    circle: {
-      width: 30,
-      height: 30,
-      borderRadius: 20,
-      backgroundColor: lineColor,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginRight: 10,
-    },
-    circleText: {
-      color: '#fff',
-      fontWeight: 'bold',
-      fontSize: 16,
-    },
-    paradaText: {
-      flex: 1,
-      backgroundColor: lineColor,
-      color: '#fff',
-      fontWeight: 'bold',
-      paddingVertical: 5,
-      paddingHorizontal: 10,
-      borderRadius: 5,
-      fontSize: 16,
-    },
-    heartButton: {
-      width: 30,
-      height: 30,
-      borderRadius: 15,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginLeft: 10,
-    },
-    heartText: {
-      color: '#fff',
-      fontSize: 18,
-    },
-    closeButton: {
-      backgroundColor: '#5cb32b',
-      padding: 10,
-      borderRadius: 50,
-      marginTop: 20,
-      alignItems: 'center',
-    },
-    closeButtonText: {
-      color: '#fff',
-      fontWeight: 'bold',
-      fontSize: 16,
-    },
-  });
-
-export default LineasView;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 16,
+    paddingTop: 110,
+  },
+  cityButton: {
+    backgroundColor: "#5cb32b",
+    padding: 16,
+    marginVertical: 8,
+    borderRadius: 8,
+  },
+  cityText: {
+    color: "#f5f5f5",
+    fontSize: 18,
+    textAlign: "center",
+    fontWeight: "bold",
+  },
+  lineButton: {
+    padding: 16,
+    marginVertical: 8,
+    borderRadius: 8,
+  },
+  lineText: {
+    color: "#fff",
+    fontSize: 16,
+    textAlign: "center",
+  },
+  backButton: {
+    textAlign: "center",
+    marginTop: 16,
+    alignSelf: "center",
+    backgroundColor: "#5cb32b",
+    padding: 15,
+    width: "90%",
+    borderRadius: 10,
+    marginBottom: 110,
+  },
+  backText: {
+    textAlign: "center",
+    color: "#f5f5f5",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  modalContainer: {
+    paddingTop: 110,
+    flex: 1,
+    padding: 16,
+  },
+  modalTitle: {
+    color: "#5cb32b",
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  stopContainer: {
+    marginVertical: 8,
+    padding: 16,
+    borderRadius: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  stopInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  stopText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  scheduleText: {
+    color: "#fff",
+    fontSize: 14,
+  },
+  expandedScheduleText: {
+    backgroundColor: "#e0e0e0",
+    padding: 8,
+    marginHorizontal: 16,
+    marginVertical: 4,
+    borderRadius: 8,
+    fontSize: 14,
+    color: "#333",
+  },
+  busImage: {
+    width: 24,
+    height: 24,
+    marginRight: 8,
+    resizeMode: "contain",
+  },
+  closeButton: {
+    marginTop: 16,
+    alignSelf: "center",
+    backgroundColor: "#5cb32b",
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 60,
+    width: "90%",
+  },
+  closeText: {
+    fontWeight: "bold",
+    textAlign: "center",
+    color: "#202020",
+    fontSize: 16,
+  },
+});

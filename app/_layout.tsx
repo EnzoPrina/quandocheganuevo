@@ -11,31 +11,33 @@ export default function Layout() {
     <FirebaseProvider>
       <AuthProvider>
         <FavoriteStopsProvider>
-          <AuthWrapper />
+          <View style={{ flex: 1 }}>
+            {/* Siempre se monta el Slot para tener el contenedor de navegación */}
+            <Slot />
+            {/* Overlay de carga mientras se valida el estado de autenticación */}
+            <AuthLoadingOverlay />
+          </View>
         </FavoriteStopsProvider>
       </AuthProvider>
     </FirebaseProvider>
   );
 }
 
-const AuthWrapper = () => {
-  const { user, loading } = useContext(AuthContext);
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#5cb32b" />
-      </View>
-    );
-  }
-
-  return <Slot />;
+const AuthLoadingOverlay = () => {
+  const { loading } = useContext(AuthContext);
+  if (!loading) return null;
+  return (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color="#5cb32b" />
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
   loadingContainer: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.7)',
   },
 });
