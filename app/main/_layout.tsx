@@ -13,7 +13,7 @@ export default function MainLayout() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    console.log('Cerrando sesión...');
+    console.log('Encerrando sessão...');
     await AuthViewModel.logout();
     setModalVisible(false);
     router.push('/');
@@ -34,7 +34,6 @@ export default function MainLayout() {
           tabBarInactiveTintColor: colorScheme === 'dark' ? '#888' : '#555',
           tabBarIcon: ({ color, size }) => {
             let iconName: string;
-
             switch (route.name) {
               case 'dashboard':
                 iconName = 'home';
@@ -49,10 +48,11 @@ export default function MainLayout() {
                 iconName = 'question-circle';
                 break;
             }
-
+            // Forzamos un tamaño fijo para todos los iconos
+            const iconSize = 28;
             return (
-              <View style={route.name === 'mapView' ? styles.mapIconWrapper : null}>
-                <FontAwesome name={iconName} size={size} color={color} />
+              <View style={[styles.iconContainer, route.name === 'mapView' && styles.mapIconWrapper]}>
+                <FontAwesome name={iconName} size={iconSize} color={route.name === 'mapView' ? 'white' : color} />
               </View>
             );
           },
@@ -81,12 +81,12 @@ export default function MainLayout() {
           ),
         })}
       >
-        <Tabs.Screen name="dashboard" options={{ title: 'Inicio' }} />
-        <Tabs.Screen name="mapView" options={{ title: 'Mapa' }} />
-        <Tabs.Screen name="lineasView" options={{ title: 'Líneas' }} />
+        <Tabs.Screen name="dashboard" options={{ title: '' }} />
+        <Tabs.Screen name="mapView" options={{ title: '' }} />
+        <Tabs.Screen name="lineasView" options={{ title: '' }} />
       </Tabs>
 
-      {/* Modal de Información */}
+      {/* Modal de Informação */}
       <Modal
         visible={infoModalVisible}
         transparent={true}
@@ -101,9 +101,57 @@ export default function MainLayout() {
               resizeMode="contain"
             />
             <Text style={styles.modalText}>Um cartão uma cidade.</Text>
-            <Text style={styles.modalSubText}>Acesso a experiências e serviços do nosso município num cartão único e gratuito.</Text>
-            <Text style={styles.modalSubText}>Esta aplicação não é oficial do Município de Bragança, mas procura ajudar o cidadão.</Text>
-            <TouchableOpacity onPress={() => setInfoModalVisible(false)} style={styles.modalButton}><Text style={styles.modalButtonText}>Fechar</Text></TouchableOpacity>
+            <Text style={styles.modalSubText}>
+              Acesso a experiências e serviços do nosso município num cartão único e gratuito.
+            </Text>
+            <Text style={styles.modalSubText}>
+              Esta aplicação não é oficial do Município de Bragança, mas procura ajudar o cidadão.
+            </Text>
+            <TouchableOpacity
+              onPress={() => setInfoModalVisible(false)}
+              style={[styles.modalButton, styles.fullWidthButton, { backgroundColor: '#5cb32b' }]}
+            >
+              <Text style={styles.modalButtonText}>Regressar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Encerrar Sessão */}
+      <Modal
+        visible={modalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Image
+              source={require('../../assets/images/CerrarSesion.png')}
+              style={styles.logoutImage}
+              resizeMode="contain"
+            />
+            <Text style={styles.modalText}>
+              Tem a certeza que quer terminar a sessão?
+            </Text>
+            <Text style={styles.modalSubText}>
+              Ao sair, perderá o acesso a funcionalidades exclusivas e as suas preferências serão
+              reiniciadas. Reconsidere e continue a desfrutar da nossa aplicação!
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#5cb32b' }]}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.modalButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#d6130c' }]}
+                onPress={handleLogout}
+              >
+                <Text style={styles.modalButtonText}>Terminar sessão</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -112,10 +160,19 @@ export default function MainLayout() {
 }
 
 const styles = StyleSheet.create({
+  iconContainer: {
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   mapIconWrapper: {
     backgroundColor: '#5cb32b',
-    padding: 5,
-    borderRadius: 20,
+    padding: 10, // Ajusta este valor para modificar el tamaño interno del círculo
+    borderRadius: 30, // Ajusta para modificar la curvatura
+    width: 70,      // Ancho del círculo (modifica según necesites)
+    height: 70,     // Alto del círculo (modifica según necesites)
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabBar: {
     marginLeft: 30,
@@ -133,8 +190,8 @@ const styles = StyleSheet.create({
     left: 10,
     right: 10,
     bottom: 30,
-    height: 65,
-    borderColor: '#202020',
+    height: 60,
+    paddingTop: 5,
   },
   logo: {
     width: 180,
@@ -171,6 +228,11 @@ const styles = StyleSheet.create({
     height: 160,
     marginBottom: 20,
   },
+  logoutImage: {
+    width: 120,
+    height: 120,
+    marginBottom: 20,
+  },
   modalText: {
     color: 'white',
     fontSize: 18,
@@ -185,6 +247,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
   },
+  fullWidthButton: {
+    width: '100%',
+  },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -195,7 +260,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 5,
-    backgroundColor: '#202020',
     marginHorizontal: 5,
     flex: 1,
     alignItems: 'center',

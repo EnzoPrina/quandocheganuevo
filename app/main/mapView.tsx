@@ -28,32 +28,25 @@ const MapViewScreen = () => {
     return hours * 60 + minutes;
   };
 
-  // Función para simular una ruta curvada (tipo Bézier) entre dos coordenadas,
-  // de forma que el autobús simule seguir las calles en vez de ir en línea recta.
+  // Función para simular una ruta curvada (Bézier) entre dos coordenadas
   const getCurvedPosition = (coordA, coordB, t) => {
-    // Punto medio entre A y B
     const midPoint = {
       latitude: (coordA.latitude + coordB.latitude) / 2,
       longitude: (coordA.longitude + coordB.longitude) / 2,
     };
-    // Vector de A a B
     const dx = coordB.latitude - coordA.latitude;
     const dy = coordB.longitude - coordA.longitude;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    // Calcular vector perpendicular (-dy, dx)
     let perp = { latitude: -dy, longitude: dx };
     const length = Math.sqrt(perp.latitude * perp.latitude + perp.longitude * perp.longitude);
     if (length !== 0) {
       perp = { latitude: perp.latitude / length, longitude: perp.longitude / length };
     }
-    // Offset proporcional a la distancia (ajusta 0.1 para modificar la curvatura)
     const offsetMagnitude = 0.1 * distance;
     const controlPoint = {
       latitude: midPoint.latitude + offsetMagnitude * perp.latitude,
       longitude: midPoint.longitude + offsetMagnitude * perp.longitude,
     };
-
-    // Interpolación cuadrática Bézier
     const oneMinusT = 1 - t;
     const latitude = oneMinusT * oneMinusT * coordA.latitude +
                      2 * oneMinusT * t * controlPoint.latitude +
@@ -78,7 +71,6 @@ const MapViewScreen = () => {
       
       // Si la primera parada no tiene schedules, usamos una simulación por defecto
       if (!stops[0].schedules) {
-        // Suponemos que el autobús recorre la ruta en un periodo fijo (por ejemplo, 30 minutos)
         const defaultDuration = 30; // en minutos
         const fraction = (currentTimeInMinutes % defaultDuration) / defaultDuration;
         const numSegments = stops.length - 1;
@@ -154,6 +146,10 @@ const MapViewScreen = () => {
   );
   const filteredStops = allStops.filter(stop => stop.line === selectedLine);
 
+  // Obtener el color de la línea seleccionada para el botón FAB
+  const selectedLineData = lines.find(line => line.line === selectedLine);
+  const selectedLineColor = selectedLineData ? selectedLineData.color : '#5cb32b';
+
   return (
     <View style={styles.container}>
       <MapView
@@ -162,27 +158,33 @@ const MapViewScreen = () => {
         onRegionChangeComplete={setRegion}
         showsUserLocation={true}
       >
-        {filteredStops.map((stop, index) => (
-          <Marker
-            key={`${stop.line}-${stop.number}-${index}`}
-            coordinate={stop.coordinates}
-            title={`Parada ${stop.number} - ${stop.name}`}
-            description={`Línea ${stop.line}`}
-          >
-            <View style={styles.markerContainer}>
-              <View style={[styles.markerCircle, { backgroundColor: stop.color }]}>
-                <Text style={styles.markerText}>{stop.number}</Text>
+        {filteredStops.map((stop, index) => {
+          // Extraer solo la parte numérica del número de parada (antes del guion, si lo hay)
+          const stopNumber = typeof stop.number === 'string' && stop.number.includes('-')
+            ? stop.number.split('-')[0].trim()
+            : stop.number;
+          return (
+            <Marker
+              key={`${stop.line}-${stop.number}-${index}`}
+              coordinate={stop.coordinates}
+              title={`${stopNumber}`}
+              description={`Parada ${stop.name}\nLínea ${stop.line}`}
+            >
+              <View style={styles.markerContainer}>
+                <View style={[styles.markerSquare, { backgroundColor: stop.color }]}>
+                  <Text style={styles.markerText}>{stopNumber}</Text>
+                </View>
               </View>
-            </View>
-          </Marker>
-        ))}
+            </Marker>
+          );
+        })}
         {busPosition && (
           <Marker coordinate={busPosition} title="Autobús en ruta" zIndex={1000}>
             <Image source={require('../../assets/images/parada.png')} style={styles.busImage} />
           </Marker>
         )}
       </MapView>
-      <TouchableOpacity style={styles.fab} onPress={() => setMenuVisible(prev => !prev)}>
+      <TouchableOpacity style={[styles.fab, { backgroundColor: selectedLineColor }]} onPress={() => setMenuVisible(prev => !prev)}>
         <Text style={styles.fabIcon}>{selectedLine ? selectedLine : "🚌"}</Text>
       </TouchableOpacity>
       {menuVisible && (
@@ -219,16 +221,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  markerCircle: {
-    width: 45,
-    height: 35,
-    borderRadius: 20,
+  markerSquare: {
+    width: 25,
+    height: 25,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   markerText: {
     color: 'white',
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 'bold',
   },
   busImage: {
@@ -242,7 +244,6 @@ const styles = StyleSheet.create({
     right: 20,
     width: 60,
     height: 60,
-    backgroundColor: '#5cb32b',
     borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
