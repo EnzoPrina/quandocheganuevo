@@ -66,7 +66,6 @@ export default function BusStopsApp() {
   // Función auxiliar: convierte "HH:MM" a minutos desde medianoche
   const parseTime = (timeStr) => {
     if (!timeStr || typeof timeStr !== "string") {
-      console.warn("parseTime recibió un valor inválido:", timeStr);
       return 0;
     }
     const [hours, minutes] = timeStr.split(":").map(Number);
@@ -81,48 +80,60 @@ export default function BusStopsApp() {
 
   // Efecto para simular en tiempo real el avance del autobús en la línea seleccionada
   useEffect(() => {
-    let timer;
-    if (selectedLine && selectedLine.stops && selectedLine.stops.length > 0) {
-      timer = setInterval(() => {
-        const currentTime = getCurrentTimeInMinutes();
+    let intervalId;
+    let simulationStart = null;
 
-        // Utilizamos los horarios de la primera parada para determinar qué salida (viaje) está activa
+    if (selectedLine && selectedLine.stops?.length > 0) {
+      intervalId = setInterval(() => {
+        const currentTime = getCurrentTimeInMinutes();
         const firstStopSchedules = selectedLine.stops[0].schedules;
+
         if (!firstStopSchedules || firstStopSchedules.length === 0) {
           setActiveStopIndex(-1);
           return;
         }
-        let activeDeparture = null;
-        for (let i = 0; i < firstStopSchedules.length; i++) {
-          const t = parseTime(firstStopSchedules[i]);
-          if (
-            currentTime >= t &&
-            (i === firstStopSchedules.length - 1 ||
-              currentTime < parseTime(firstStopSchedules[i + 1]))
-          ) {
-            activeDeparture = i;
-            break;
-          }
-        }
-        if (activeDeparture === null) {
-          setActiveStopIndex(-1);
+
+
+
+
+        //
+
+
+        //
+        // Buscar el horario de salida más cercano que ya haya pasado
+        const upcomingSchedule = [...firstStopSchedules]
+        .reverse()
+        .find((s) => parseTime(s) <= currentTime);
+
+        const startTime = parseTime(upcomingSchedule);
+        const stops = selectedLine.stops;
+
+        // Duración total del recorrido en minutos
+        const totalDuration =
+          parseTime(
+            stops[stops.length - 1].schedules[
+              firstStopSchedules.indexOf(upcomingSchedule)
+            ]
+          ) - startTime;
+
+        // Tiempo transcurrido desde la salida
+        const elapsed = currentTime - startTime;
+
+        // Calcular índice de parada actual según progresión lineal
+        const currentIndex = Math.floor(
+          (elapsed / totalDuration) * (stops.length - 1)
+        );
+
+        if (elapsed >= 0 && elapsed <= totalDuration) {
+          setActiveStopIndex(currentIndex);
         } else {
-          let index = -1;
-          selectedLine.stops.forEach((stop, i) => {
-            const scheduleValue = stop.schedules && stop.schedules[activeDeparture];
-            if (scheduleValue) {
-              const t = parseTime(scheduleValue);
-              if (currentTime >= t) {
-                index = i;
-              }
-            }
-          });
-          setActiveStopIndex(index);
+          setActiveStopIndex(-1); // Bus finalizó, espera al próximo horario
         }
       }, 1000);
     }
+
     return () => {
-      if (timer) clearInterval(timer);
+      if (intervalId) clearInterval(intervalId);
     };
   }, [selectedLine]);
 
@@ -154,7 +165,7 @@ export default function BusStopsApp() {
                 style={[styles.lineButton, { backgroundColor: lineColor }]}
                 onPress={() => openLineDetails(item)}
               >
-                <Text style={styles.lineText}>Línea: {item.number}</Text>
+                <Text style={styles.lineText}>Linha: {item.number}</Text>
               </TouchableOpacity>
             );
           }}
@@ -166,13 +177,13 @@ export default function BusStopsApp() {
           style={styles.backButton}
           onPress={() => setSelectedCity(null)}
         >
-          <Text style={styles.backText}>Volver a ciudades</Text>
+          <Text style={styles.backText}>Regressar às cidades</Text>
         </TouchableOpacity>
       )}
 
       <Modal visible={showModal} animationType="slide">
         <View style={[styles.modalContainer, { backgroundColor }]}>
-          <Text style={styles.modalTitle}>Línea {selectedLine?.number}</Text>
+          <Text style={styles.modalTitle}>Linha {selectedLine?.number}</Text>
           <FlatList
             data={selectedLine?.stops || []}
             keyExtractor={(item, index) => index.toString()}
@@ -228,7 +239,7 @@ export default function BusStopsApp() {
             style={styles.closeButton}
             onPress={() => setShowModal(false)}
           >
-            <Text style={styles.closeText}>Cerrar</Text>
+            <Text style={styles.closeText}>Fechar</Text>
           </Pressable>
         </View>
       </Modal>
@@ -340,7 +351,7 @@ const styles = StyleSheet.create({
   closeText: {
     fontWeight: "bold",
     textAlign: "center",
-    color: "#202020",
+    color: "#fff",
     fontSize: 16,
   },
 });

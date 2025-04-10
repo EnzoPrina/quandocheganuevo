@@ -1,36 +1,69 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, TextInput, Text, StyleSheet, Image, TouchableOpacity, Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback } from 'react-native';
-import { AuthViewModel } from '../src/viewmodels/AuthViewModel'; // Asegúrate de que la ruta sea correcta
-import { useRouter } from 'expo-router'; // Hook de navegación
-import { Ionicons } from '@expo/vector-icons'; // Para el icono de ojo
+import { AuthViewModel } from '../src/viewmodels/AuthViewModel';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function RegisterScreen() {
+  const [nome, setNome] = useState('');
+  const [apelido, setApelido] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // Estado para mostrar u ocultar la contraseña
-  const router = useRouter(); // Hook para la navegación
+  const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
+  const validateEmail = (email: string) => {
+    const re = /\S+@\S+\.\S+/;
+    return re.test(email);
+  };
 
-  // Función para manejar el registro
   const handleRegister = async () => {
-    const user = await AuthViewModel.register(email, password);
+
+    if (!nome || !apelido || !email || !password) {
+      setError('Por favor, preencha todos os campos.');
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      setError('Por favor, insira um e-mail válido.');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('A palavra-passe deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
+    // Asegurándonos de que no haya valores indefinidos
+    const userData = {
+      nome: nome.trim(),
+      apelido: apelido.trim(),
+      email: email.trim(),
+      password: password.trim()
+    };
+
+    if (!userData.nome || !userData.apelido || !userData.email || !userData.password) {
+      setError('Por favor, preencha todos os campos corretamente.');
+      return;
+    }
+
+    const user = await AuthViewModel.register(userData.email, userData.password);
+
     if (user) {
-      setSuccess(`Registro exitoso para ${user.email}`);
+      setSuccess(`Registo bem-sucedido para ${user.email}`);
       setError('');
-      // Redirigir a login después de registro exitoso
       setTimeout(() => {
-        router.push('/'); // Redirige a la pantalla de login
-      }, 2000); // Espera 2 segundos para mostrar el mensaje de éxito antes de redirigir
+        router.push('/');
+      }, 2000);
     } else {
-      setError('Error al registrar el usuario.');
+      setError('Erro ao registar o utilizador.');
       setSuccess('');
     }
   };
 
-  // Función para redirigir a login si ya se tiene cuenta
   const goToLogin = () => {
-    router.push('/'); // Redirige a la pantalla de login
+    router.push('/');
   };
 
   return (
@@ -40,8 +73,27 @@ export default function RegisterScreen() {
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.inner}>
-          {/* Logo de la aplicación */}
           <Image source={require('../assets/images/LogoMano.png')} style={styles.logo} />
+          
+          <Text style={styles.motivationalText}>
+            Está a um passo de ficar mais perto do seu autocarro!
+          </Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="Nome"
+            placeholderTextColor="white"
+            onChangeText={setNome}
+            value={nome}
+          />
+
+          <TextInput
+            style={styles.input}
+            placeholder="Apelido"
+            placeholderTextColor="white"
+            onChangeText={setApelido}
+            value={apelido}
+          />
 
           <TextInput
             style={styles.input}
@@ -49,32 +101,34 @@ export default function RegisterScreen() {
             placeholderTextColor="white"
             onChangeText={setEmail}
             value={email}
+            keyboardType="email-address"
+            autoCapitalize="none"
           />
+
           <View style={styles.passwordContainer}>
             <TextInput
               style={styles.input}
-              placeholder="Contraseña"
+              placeholder="Palavra-passe"
               secureTextEntry={!showPassword}
               placeholderTextColor="white"
               onChangeText={setPassword}
               value={password}
+              autoCapitalize="none"
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.icon}>
               <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={24} color="white" />
             </TouchableOpacity>
           </View>
 
-          {/* Botón de Registrarse */}
           <TouchableOpacity style={styles.button} onPress={handleRegister}>
-            <Text style={styles.buttonText}>Registrarse</Text>
+            <Text style={styles.buttonText}>Registar</Text>
           </TouchableOpacity>
 
           {success ? <Text style={styles.success}>{success}</Text> : null}
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          {/* Botón para redirigir al login si ya tiene cuenta */}
           <TouchableOpacity onPress={goToLogin}>
-            <Text style={styles.loginText}>Ya tengo una cuenta, iniciar sesión</Text>
+            <Text style={styles.loginText}>Já tenho uma conta, iniciar sessão</Text>
           </TouchableOpacity>
         </View>
       </TouchableWithoutFeedback>
@@ -87,7 +141,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#202020', // Fondo rojo
+    backgroundColor: '#202020',
   },
   inner: {
     padding: 20,
@@ -96,24 +150,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logo: {
-    width: 350, // Tamaño del logo
-    height: 350, // Tamaño del logo
-    marginBottom: 30, // Espacio debajo del logo
+    width: 250,
+    height: 250,
+    marginBottom: 20,
+  },
+  motivationalText: {
+    color: '#5cb32b',
+    fontSize: 18,
+    textAlign: 'center',
+    marginBottom: 30,
+    paddingHorizontal: 20,
+    fontStyle: 'italic',
+    fontWeight: '500',
   },
   input: {
-    width: '100%', // Hace que el input ocupe todo el ancho disponible
+    width: '100%',
     borderWidth: 1,
-    borderColor: '#5cb32b', // Borde blanco
-    paddingTop: 15,
-    paddingBottom: 15,
+    borderColor: '#5cb32b',
+    padding: 15,
     marginBottom: 15,
-    padding: 10,
     borderRadius: 10,
-    color: 'white', // Texto blanco dentro del input
+    color: 'white',
   },
   passwordContainer: {
     width: '100%',
-    position: 'relative', // Necesario para posicionar el icono del ojo sobre el input
+    position: 'relative',
   },
   icon: {
     position: 'absolute',
@@ -123,30 +184,36 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: '#5cb32b',
-    width: '100%', // Hace que el botón ocupe el mismo ancho que el input
+    width: '100%',
     padding: 15,
     marginBottom: 15,
     borderRadius: 10,
     alignItems: 'center',
-    boxShadow: '0 2px 10px rgba(92, 179, 43, 0.6)', // Sombra en el color verde/neón
+    shadowColor: '#5cb32b',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 5,
+    elevation: 5,
   },
   buttonText: {
-    color: '#202020', // Texto gris
+    color: '#202020',
     fontSize: 16,
     fontWeight: 'bold',
   },
   error: {
-    color: 'red',
+    color: '#ff4444',
     marginTop: 10,
+    textAlign: 'center',
   },
   success: {
-    color: 'green',
+    color: '#00C851',
     marginTop: 10,
+    textAlign: 'center',
   },
   loginText: {
-    color: 'white', // Texto blanco
+    color: 'white',
     marginTop: 15,
-    textDecorationLine: 'underline', // Subrayado para el texto
+    textDecorationLine: 'underline',
     fontSize: 16,
   },
 });

@@ -1,0 +1,13 @@
+diff --git a/node_modules/expo-ads-admob/android/build.gradle b/node_modules/expo-ads-admob/android/build.gradle
+index d1f33ca..c1e379d 100644
+--- a/node_modules/expo-ads-admob/android/build.gradle
++++ b/node_modules/expo-ads-admob/android/build.gradle
+@@ -37,7 +37,7 @@ buildscript {
+ 
+ // Creating sources with comments
+ task androidSourcesJar(type: Jar) {
+-  classifier = 'sources'
++    archiveClassifier.set('sources') // <-- Modifica esta línea
+   from android.sourceSets.main.java.srcDirs
+ }
+ 

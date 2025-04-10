@@ -43,7 +43,6 @@ export default function Index() {
         setLoading(false);
       },
       (error) => {
-        console.error('Erro ao ouvir mudanças nos anúncios:', error);
         setLoading(false);
       }
     );

@@ -13,7 +13,6 @@ export default function MainLayout() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    console.log('Encerrando sessão...');
     await AuthViewModel.logout();
     setModalVisible(false);
     router.push('/');
@@ -25,11 +24,12 @@ export default function MainLayout() {
         screenOptions={({ route }) => ({
           tabBarStyle: [
             styles.tabBar,
-            {
-              backgroundColor:
-                colorScheme === 'dark' ? DarkTheme.colors.card : DefaultTheme.colors.card,
+            {                
+              borderColor: colorScheme === 'dark' ? DarkTheme.colors.card : DefaultTheme.colors.card,
+              backgroundColor: colorScheme === 'dark' ? DarkTheme.colors.card : DefaultTheme.colors.card,
             },
           ],
+          tabBarShowLabel: false,
           tabBarActiveTintColor: '#5cb32b',
           tabBarInactiveTintColor: colorScheme === 'dark' ? '#888' : '#555',
           tabBarIcon: ({ color, size }) => {
@@ -48,7 +48,6 @@ export default function MainLayout() {
                 iconName = 'question-circle';
                 break;
             }
-            // Forzamos un tamaño fijo para todos los iconos
             const iconSize = 28;
             return (
               <View style={[styles.iconContainer, route.name === 'mapView' && styles.mapIconWrapper]}>
@@ -71,12 +70,20 @@ export default function MainLayout() {
           headerTitleAlign: 'center',
           headerLeft: () => (
             <TouchableOpacity style={styles.iconButton} onPress={() => setInfoModalVisible(true)}>
-              <FontAwesome name="info-circle" size={28} color="white" />
+              <FontAwesome 
+                name="info-circle" 
+                size={28} 
+                color={colorScheme === 'dark' ? 'white' : '#5cb32b'} 
+              />
             </TouchableOpacity>
           ),
           headerRight: () => (
             <TouchableOpacity style={styles.iconButton} onPress={() => setModalVisible(true)}>
-              <FontAwesome name="power-off" size={28} color="white" />
+              <FontAwesome 
+                name="power-off" 
+                size={28} 
+                color={colorScheme === 'dark' ? 'white' : '#5cb32b'} 
+              />
             </TouchableOpacity>
           ),
         })}
@@ -95,6 +102,12 @@ export default function MainLayout() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
+            <TouchableOpacity 
+              style={styles.closeButton} 
+              onPress={() => setInfoModalVisible(false)}
+            >
+              <FontAwesome name="times" size={24} color="white" />
+            </TouchableOpacity>
             <Image
               source={require('../../assets/images/cartao.png')}
               style={styles.modalImage}
@@ -107,12 +120,6 @@ export default function MainLayout() {
             <Text style={styles.modalSubText}>
               Esta aplicação não é oficial do Município de Bragança, mas procura ajudar o cidadão.
             </Text>
-            <TouchableOpacity
-              onPress={() => setInfoModalVisible(false)}
-              style={[styles.modalButton, styles.fullWidthButton, { backgroundColor: '#5cb32b' }]}
-            >
-              <Text style={styles.modalButtonText}>Regressar</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -167,10 +174,10 @@ const styles = StyleSheet.create({
   },
   mapIconWrapper: {
     backgroundColor: '#5cb32b',
-    padding: 10, // Ajusta este valor para modificar el tamaño interno del círculo
-    borderRadius: 30, // Ajusta para modificar la curvatura
-    width: 70,      // Ancho del círculo (modifica según necesites)
-    height: 70,     // Alto del círculo (modifica según necesites)
+    padding: 10,
+    borderRadius: 30,
+    width: 70,
+    height: 70,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -268,5 +275,12 @@ const styles = StyleSheet.create({
   modalButtonText: {
     color: '#fff',
     fontSize: 16,
+  },
+  closeButton: {
+    position: 'absolute',
+    right: 10,
+    top: 10,
+    zIndex: 1,
+    padding: 5,
   },
 });
