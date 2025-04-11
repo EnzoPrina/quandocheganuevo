@@ -26,26 +26,41 @@
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
-"plugins": [
-  "expo-router",
-  [
-    "react-native-google-mobile-ads",
-    {
-      "androidAppId": "ca-app-pub-8499005196230221~8111584457",
-      "iosAppId": "ca-app-pub-8499005196230221~5567079498"
-    }
-  ],
-  [
-    "expo-splash-screen",
-    {
+    "plugins": [
+
+      [
+        "react-native-maps",
+        {
+          "androidApiKey": "AIzaSyDs1Y0CQOmwoSJ-rBSw8WCHWNSV-qD6W9c"
+        }
+      ],
+      "expo-router",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-8499005196230221~8111584457",
+          "iosAppId": "ca-app-pub-8499005196230221~5567079498"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#f3f3f3"
+        }
+      ]
+    ],
+    "androidStatusBar": {
+      "barStyle": "light-content",
+      "backgroundColor": "#000000"
+    },
+    "splash": {
       "image": "./assets/images/icon.png",
-      "imageWidth": 200,
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
-    }
-  ]
-]
-,
+    },
     "experiments": {
       "typedRoutes": true
     },
